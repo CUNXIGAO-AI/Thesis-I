@@ -92,7 +92,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.meshsync": {
-      "version": "file:E:/BaiduNetdiskDownload/杂七杂八/Unity Assets/com.unity.meshsync-0.17.3-preview.tgz",
+      "version": "file:C:/Google Download/com.unity.meshsync-0.17.3-preview.tgz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {

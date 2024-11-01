@@ -11,6 +11,7 @@ TagManager:
   - Animal
   - Water
   - Spark
+  - Cover
   layers:
   - Default
   - TransparentFX
