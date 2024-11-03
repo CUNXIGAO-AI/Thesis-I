@@ -63,6 +63,16 @@ public class EnemyStateManager : MonoBehaviour
     private float waitTimer = 0f;  // 停留计时器
     private bool previousCanSeeItem = false; // 用于跟踪上一次的 canSeeItem 状态
 
+    private Light alertSpotLight;  // 用于引用 SpotLight
+
+    [Header("Light Colors")] // 在 Inspector 窗口中自定义颜色
+    public Color lowAlertColor = Color.white;
+    public Color mediumAlertColor = new Color(1f, 0.65f, 0f);   // 默认橙色
+    public Color highAlertColor = new Color(1f, 0.4f, 0f);       // 默认深橙色
+    public Color maxAlertColor =  new Color(1f, 0f, 0f);         // 默认红色
+
+    private Color targetColor;     // 目标颜色
+    public float colorLerpSpeed = 2f;  // 控制 Lerp 速度
 
 
     void Start()
@@ -93,6 +103,14 @@ public class EnemyStateManager : MonoBehaviour
         if (rotationPoints.Length > 0)
         {
             targetRotation = Quaternion.Euler(rotationPoints[currentRotationIndex]);
+        }
+
+        alertSpotLight = transform.Find("Spot Light").GetComponent<Light>();
+
+        // 确保找到 SpotLight
+        if (alertSpotLight == null)
+        {
+            Debug.LogError("SpotLight not found! Please ensure it is a child of this GameObject.");
         }
     }
 
@@ -126,7 +144,6 @@ public class EnemyStateManager : MonoBehaviour
             {
                 ResourceManager.Instance.ChangeUIColor(Color.yellow);
                 ResourceManager.Instance.SetDepletionMultiplier(3f);
-
             }
             else
             {
@@ -138,11 +155,12 @@ public class EnemyStateManager : MonoBehaviour
         }
 
         UpdateAlertMeter();
-        UpdateAlertBarUI();
+        UpdateAlertLight();
 
         // 更新 LineRenderer 的位置和颜色
-        Vector3 endPoint = transform.position + rayDirection * viewRadius;
-        UpdateLineRenderer(transform.position, endPoint, canSeeItem ? detectedRayColor : defaultRayColor);
+        // 先关掉射线
+        // Vector3 endPoint = transform.position + rayDirection * viewRadius;
+        // UpdateLineRenderer(transform.position, endPoint, canSeeItem ? detectedRayColor : defaultRayColor);
         
     }
 
@@ -350,36 +368,31 @@ void UpdateAlertMeter()
     }
 }
 
-
-    void UpdateAlertBarUI()
+    void UpdateAlertLight()
     {
-        if (alertBarUI != null)
+        if (alertSpotLight != null)  // 确保 SpotLight 存在
         {
-            // 通过警戒值来设置警戒条的填充量
-            alertBarUI.fillAmount = alertMeter / alertMeterMax;
-
-            // 根据警戒值直接切换颜色
+            // 根据警戒值确定目标颜色
             if (alertMeter <= 25)
             {
-                // 0-25：白色
-                alertBarUI.color = Color.white;
+                targetColor = lowAlertColor;
             }
             else if (alertMeter > 25 && alertMeter <= 50)
             {
-                // 25-50：橙色
-                alertBarUI.color = new Color(1f, 0.65f, 0f);  // 橙色 (RGB: 1, 0.65, 0)
+                targetColor = mediumAlertColor;
             }
             else if (alertMeter > 50 && alertMeter < 100)
             {
-                // 50-100：深橙色
-                alertBarUI.color = new Color(1f, 0.4f, 0f);  // 深橙色 (RGB: 1, 0.4f, 0)
+                targetColor = highAlertColor;
             }
             else if (alertMeter >= 100)
             {
-                // 100：红色，并且停止降低警戒值
-                alertBarUI.color = Color.red;
-                canDecreaseAlertMeter = false;  // 到达 100 时停止降低
+                targetColor = maxAlertColor;
+                canDecreaseAlertMeter = false;  // 达到最大值后停止降低
             }
+
+            // 使用 Lerp 平滑过渡到目标颜色
+            alertSpotLight.color = Color.Lerp(alertSpotLight.color, targetColor, Time.deltaTime * colorLerpSpeed);
         }
     }
 

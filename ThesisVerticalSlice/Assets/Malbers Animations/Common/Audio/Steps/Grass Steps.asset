@@ -14,8 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Description: Store a Collection of AudioClip
   items:
-  - {fileID: 8300000, guid: 73addaaa36bc5b4478d7cbee61bd3ad0, type: 3}
-  - {fileID: 8300000, guid: 7f5d9f9991c533547a0f2e8dca867933, type: 3}
-  - {fileID: 8300000, guid: bbd4941d8f179af4eaa8b0e6f06352a8, type: 3}
-  - {fileID: 8300000, guid: 50ef9e51d993734499f3ba55391226ec, type: 3}
-  - {fileID: 8300000, guid: 272c1b463f5155543881cb12a3fad53b, type: 3}
+  - {fileID: 8300000, guid: ca0f3baaa65820d45b5cf4be01f48ad7, type: 3}
+  - {fileID: 8300000, guid: ca0f3baaa65820d45b5cf4be01f48ad7, type: 3}
+  - {fileID: 8300000, guid: 412a56e26c56cfb48b92ff3f5324babd, type: 3}
+  - {fileID: 8300000, guid: 412a56e26c56cfb48b92ff3f5324babd, type: 3}
+  pitch:
+    minValue: 0.9
+    maxValue: 1.1
+  volume:
+    minValue: 0.3
+    maxValue: 0.5
+  SpatialBlend: 1

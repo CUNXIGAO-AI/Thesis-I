@@ -89,6 +89,7 @@ namespace MalbersAnimations.Controller
         }
 
         [SerializeField] private Pickable focusedItem;
+        private bool isResourceItemPicked;
         public Pickable FocusedItem
         {
             get => focusedItem;
@@ -99,6 +100,8 @@ namespace MalbersAnimations.Controller
                 CanPickUp.Invoke(focusedItem != null);
             }
         }
+
+        public BoolEvent OnResourceItemPicked = new BoolEvent();
 
         private void Awake()
         {
@@ -259,8 +262,6 @@ namespace MalbersAnimations.Controller
 
             if (Item)
             {
-                Debugging("Item Picked - " + Item.name);
-
                 if (TryAlign != null) StopCoroutine(TryAlign);
 
                 PickingItem = false; //Try picking set to false

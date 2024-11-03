@@ -44,19 +44,37 @@ public class ResourceManager : MonoBehaviour
      private void Update()
     {
         // deplete the resource over time
-        if (isDepleting && currentResource > 0)
+    if (isDepleting && currentResource > 0)
         {
             currentResource -= depletionRate * depletionMultiplier * Time.deltaTime;
             UpdateResourceUI();
 
+            // 检查资源值是否低于50，并开始播放循环音效
+            if (currentResource < 50)
+            {
+                SoundManager.Instance.PlayLoopingSound();
+            }
+            else
+            {
+                // 如果资源值高于50，停止循环音效
+                SoundManager.Instance.StopLoopingSound();
+            }
 
-            // stop depleting the resource if it reaches zero
+            // Stop depleting the resource and sound if it reaches zero
             if (currentResource <= 0)
             {
+                SoundManager.Instance.StopLoopingSound(); // 停止循环音效
+                SoundManager.Instance.PlayGlassBrokenSound(); // 播放玻璃破碎音效
                 currentResource = 0;
-                isDepleting = false; // stop depleting the resource
+                isDepleting = false;
             }
         }
+        else if (!isDepleting)
+        {
+            // 当不再耗减资源时，停止循环音效
+            SoundManager.Instance.StopLoopingSound();
+        }
+        
     }
 
 
@@ -97,5 +115,4 @@ public void StartResourceDepletion(float initialMaxResource)
     {
         depletionMultiplier = multiplier;
     }
-
 }

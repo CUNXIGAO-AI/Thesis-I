@@ -7,9 +7,9 @@ namespace MalbersAnimations.Scriptables
     public class AudioClipListVar : ScriptableList<AudioClip>
     {
 
-        [MinMaxRange(-3, 3)]
+        [MinMaxRange(1f, 1f)]
         public RangedFloat pitch = new(1, 1);
-        [MinMaxRange(0, 1)]
+        [MinMaxRange(1, 1)]
         public RangedFloat volume = new(1, 1);
 
         [Range(0, 1)]
