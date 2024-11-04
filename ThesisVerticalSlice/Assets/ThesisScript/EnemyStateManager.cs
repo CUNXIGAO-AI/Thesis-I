@@ -142,12 +142,12 @@ public class EnemyStateManager : MonoBehaviour
 
             if (canSeeItem) // 检测到物品
             {
-                ResourceManager.Instance.ChangeUIColor(Color.yellow);
-                ResourceManager.Instance.SetDepletionMultiplier(3f);
+                ResourceManager.Instance.ChangeUIColor(new Color(1f, 0f, 0f, 1f));
+                ResourceManager.Instance.SetDepletionMultiplier(15f);
             }
             else
             {
-                ResourceManager.Instance.ChangeUIColor(Color.white);
+                ResourceManager.Instance.ChangeUIColor(new Color(1f, 1f, 1f, 0.5f));
                 ResourceManager.Instance.SetDepletionMultiplier(1f);
             }
             // 更新 previousCanSeeItem 状态

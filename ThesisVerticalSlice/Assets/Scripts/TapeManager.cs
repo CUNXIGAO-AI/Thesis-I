@@ -6,7 +6,8 @@ using UnityEngine;
 public class TapeManager : MonoBehaviour
 {
     public float TransitionDuration = 2.0f;// 控制渐变时间（秒）
-    public float musicTransitionDuration = 5.0f;// 控制音频音量渐变时间
+    public float musicFadeInDuration = 10.0f;// 控制音频音量渐变时间
+    public float musicFadeOutDuration = 1.0f;// 控制音频音量渐变时间
     public float fogDelay = 0.5f;// 变化的延迟时间（秒）
     public float musicDelay = 0.5f;// 音频变化的延迟时间
     public Light targetLight;// 需要调整的灯光
@@ -154,7 +155,7 @@ public class TapeManager : MonoBehaviour
         {
             StopCoroutine(musicCoroutine);
         }
-        musicCoroutine = StartCoroutine(ChangeMusicVolumeWithDelay(1f, musicDelay)); // 音量渐入至 1
+        musicCoroutine = StartCoroutine(MusicFade(1f, musicDelay, musicFadeInDuration)); // 音量渐入至 1
     }
     public void OnDroppedMusic()
     {
@@ -164,19 +165,19 @@ public class TapeManager : MonoBehaviour
         {
             StopCoroutine(musicCoroutine);
         }
-        musicCoroutine = StartCoroutine(ChangeMusicVolumeWithDelay(0f, musicDelay)); // 音量渐出至 0
+        musicCoroutine = StartCoroutine(MusicFade(0f, musicDelay, musicFadeOutDuration)); // 音量渐出至 0
     }
-    private IEnumerator ChangeMusicVolumeWithDelay(float targetVolume, float delay)
+    private IEnumerator MusicFade(float targetVolume, float delay, float musicFadeDuration)
     {
         yield return new WaitForSeconds(delay);
 
         float startVolume = audioSource.volume;
         float elapsedTime = 0f;
 
-        while (elapsedTime < musicTransitionDuration)
+        while (elapsedTime < musicFadeDuration)
         {
             elapsedTime += Time.deltaTime;
-            audioSource.volume = Mathf.Lerp(startVolume, targetVolume, elapsedTime / musicTransitionDuration);
+            audioSource.volume = Mathf.Lerp(startVolume, targetVolume, elapsedTime / musicFadeDuration);
             yield return null;
         }
 

@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     // 在Inspector中可以添加的物体列表
-    public List<GameObject> TigerCombat;
+    public List<GameObject> CCTVs;
     
     // Start is called before the first frame update
     void Start()
@@ -17,7 +17,7 @@ public class GameManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         
         // 在游戏开始时，将列表中的所有物体设为不激活
-        foreach (GameObject obj in TigerCombat)
+        foreach (GameObject obj in CCTVs)
         {
             if (obj != null)
             {
@@ -29,10 +29,7 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyUp(KeyCode.R))
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
+        
     }
     
     private void OnTriggerEnter(Collider other)
@@ -41,7 +38,7 @@ public class GameManager : MonoBehaviour
         if (other.CompareTag("Animal"))
         {
             // 将列表中的所有物体设为激活
-            foreach (GameObject obj in TigerCombat)
+            foreach (GameObject obj in CCTVs)
             {
                 if (obj != null)
                 {
