@@ -35,8 +35,8 @@ public class ResourceManager : MonoBehaviour
             currentResource -= depletionRate * depletionMultiplier * Time.deltaTime;
             UpdateResourceUI();
 
-            // 检查资源值是否低于 50，并开始播放循环音效
-            if (currentResource < 50)
+            // 检查资源值是否低于 75，并开始播放循环音效
+            if (currentResource < 75)
             {
                 SoundManager.Instance.PlayLoopingSound();
             }
