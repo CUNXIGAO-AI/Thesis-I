@@ -44,8 +44,6 @@ public class EnemyStateManager : MonoBehaviour
     public float alertMeterDecreaseRate = 3f;  // 未检测到玩家时警戒条减少速度
 
     // 警戒条 UI
-    public Image alertBarUI;  // 警戒条 Image
-    public Transform alertBarCanvas;  // 警戒条的 Canvas
 
     // 定义多个警戒值阈值
     public float[] alertThresholds = { 25f, 50f, 100f };
@@ -73,6 +71,7 @@ public class EnemyStateManager : MonoBehaviour
 
     private Color targetColor;     // 目标颜色
     public float colorLerpSpeed = 2f;  // 控制 Lerp 速度
+    private ResourceManager resourceManager;
 
 
     void Start()
@@ -112,11 +111,16 @@ public class EnemyStateManager : MonoBehaviour
         {
             Debug.LogError("SpotLight not found! Please ensure it is a child of this GameObject.");
         }
+
+        resourceManager = FindAnyObjectByType<ResourceManager>();
+        if (resourceManager == null)
+        {
+            Debug.LogError("ResourceManager not found in the scene!");
+        }
     }
 
      void Update()
     {
-        UpdateAlertBarPosition();
         currentState.UpdateState(this);
 
         if (shouldRotate)
@@ -142,13 +146,13 @@ public class EnemyStateManager : MonoBehaviour
 
             if (canSeeItem) // 检测到物品
             {
-                ResourceManager.Instance.ChangeUIColor(new Color(1f, 0f, 0f, 1f));
-                ResourceManager.Instance.SetDepletionMultiplier(15f);
+                resourceManager.ChangeUIColor(new Color(1f, 0f, 0f, 1f));
+                resourceManager.SetDepletionMultiplier(15f);
             }
             else
             {
-                ResourceManager.Instance.ChangeUIColor(new Color(1f, 1f, 1f, 0.5f));
-                ResourceManager.Instance.SetDepletionMultiplier(1f);
+                resourceManager.ChangeUIColor(new Color(1f, 1f, 1f, 0.5f));
+                resourceManager.SetDepletionMultiplier(1f);
             }
             // 更新 previousCanSeeItem 状态
             previousCanSeeItem = canSeeItem;
@@ -307,22 +311,6 @@ public bool DetectItem()
         direction = direction * Mathf.Cos(verticalRadians) + transform.up * Mathf.Sin(verticalRadians);
 
         return direction;
-    }
-
-    void UpdateAlertBarPosition()
-    {
-        if (alertBarCanvas != null)
-        {
-            // 设置警戒条 Canvas 在敌人头顶上方
-            alertBarCanvas.position = transform.position + Vector3.up * 3f;  // 2f 是头部高度，可根据需要调整
-            alertBarCanvas.rotation = Camera.main.transform.rotation;  // 使警戒条始终面向相机
-        }
-
-        // 更新警戒条的填充
-        if (alertBarUI != null)
-        {
-            alertBarUI.fillAmount = alertMeter / alertMeterMax;
-        }
     }
 
 void UpdateAlertMeter()

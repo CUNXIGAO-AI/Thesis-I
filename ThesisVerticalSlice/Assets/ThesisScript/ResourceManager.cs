@@ -2,12 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class ResourceManager : MonoBehaviour
 {
-    // signleton pattern
-    public static ResourceManager Instance { get; private set; }
-
     [Header("Resource Settings")]
     public float currentResource = 100f;  // current resource value
     public float maxResource = 100f;      // max resource value
@@ -24,77 +22,60 @@ public class ResourceManager : MonoBehaviour
 
     private void Awake()
     {
-        
-        if (Instance == null)
+        if (resourceCanvas != null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);  // keep the resource manager alive between scenes
-        }
-        else
-        {
-            Destroy(gameObject);  // destroy the duplicate resource manager, if any
-        }
-
-        if (resourceCanvas != null) // disable the resource UI on start
-        {
-            resourceCanvas.enabled = false; // disable the resource UI
+            resourceCanvas.enabled = false;
         }
     }
 
-     private void Update()
+    private void Update()
     {
-        // deplete the resource over time
-    if (isDepleting && currentResource > 0)
+        if (isDepleting && currentResource > 0)
         {
             currentResource -= depletionRate * depletionMultiplier * Time.deltaTime;
             UpdateResourceUI();
 
-            // 检查资源值是否低于50，并开始播放循环音效
+            // 检查资源值是否低于 50，并开始播放循环音效
             if (currentResource < 50)
             {
                 SoundManager.Instance.PlayLoopingSound();
             }
             else
             {
-                // 如果资源值高于50，停止循环音效
                 SoundManager.Instance.StopLoopingSound();
             }
 
-            // Stop depleting the resource and sound if it reaches zero
+            // 当资源耗尽时停止
             if (currentResource <= 0)
             {
-                SoundManager.Instance.StopLoopingSound(); // 停止循环音效
-                SoundManager.Instance.PlayGlassBrokenSound(); // 播放玻璃破碎音效
+                SoundManager.Instance.StopLoopingSound();
+                SoundManager.Instance.PlayGlassBrokenSound();
                 currentResource = 0;
                 isDepleting = false;
             }
         }
         else if (!isDepleting)
         {
-            // 当不再耗减资源时，停止循环音效
             SoundManager.Instance.StopLoopingSound();
         }
-        
     }
 
-
-public void StartResourceDepletion(float initialMaxResource)
+    public void StartResourceDepletion(float initialMaxResource)
     {
         if (!isInitialized)
         {
-            maxResource = initialMaxResource;  // initialize the max resource value
-            currentResource = maxResource;     // set the current resource value to max
+            maxResource = initialMaxResource;
+            currentResource = maxResource;
             isInitialized = true;
         }
 
-        resourceCanvas.enabled = true;         // enable the resource UI
-        isDepleting = true;                    // start depleting the resource
+        resourceCanvas.enabled = true;
+        isDepleting = true;
     }
 
     public void StopResourceDepletion()
     {
-        isDepleting = false;            // stop depleting the resource
-        //resourceCanvas.enabled = false; // disable the resource UI
+        isDepleting = false;
     }
 
     private void UpdateResourceUI()
@@ -102,17 +83,17 @@ public void StartResourceDepletion(float initialMaxResource)
         if (resourceImage != null)
         {
             resourceImage.fillAmount = currentResource / maxResource;
-            // change the color of the resource image when get detected
         }
     }
 
     public void ChangeUIColor(Color targetColor)
     {
-        resourceImage.color = targetColor; // 设置为目标颜色
+        resourceImage.color = targetColor;
     }
 
     public void SetDepletionMultiplier(float multiplier)
     {
         depletionMultiplier = multiplier;
     }
+
 }
