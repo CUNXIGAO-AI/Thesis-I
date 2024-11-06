@@ -7,6 +7,8 @@ public class GameManager : MonoBehaviour
 {
     // 在Inspector中可以添加的物体列表
     public List<GameObject> CCTVs;
+    public GameObject wolf;
+    public Transform referenceObject;
     
     // Start is called before the first frame update
     void Start()
@@ -33,6 +35,11 @@ public class GameManager : MonoBehaviour
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
+
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ChangeWolfPosition();
+        }
     }
     
     private void OnTriggerEnter(Collider other)
@@ -48,6 +55,20 @@ public class GameManager : MonoBehaviour
                     obj.SetActive(true);
                 }
             }
+        }
+    }
+
+    private void ChangeWolfPosition()
+    {
+        if(wolf != null && referenceObject != null)
+        {
+            wolf.transform.position = referenceObject.position;
+            wolf.transform.rotation = referenceObject.rotation;
+        }
+        
+        else
+        {
+            Debug.Log("Wolf GameObject is not assigned.");
         }
     }
 }
