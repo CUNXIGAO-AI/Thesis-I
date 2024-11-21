@@ -7,7 +7,7 @@ public class EnemyCombatState : EnemyBaseState
     // Start is called before the first frame update
     public override void EnterState(EnemyStateManager enemy)
     {
-
+        Debug.Log("In Combat State");
     }
     
     public override void UpdateState(EnemyStateManager enemy)

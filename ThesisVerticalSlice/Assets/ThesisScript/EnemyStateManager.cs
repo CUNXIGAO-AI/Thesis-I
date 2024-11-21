@@ -10,7 +10,6 @@ public class EnemyStateManager : MonoBehaviour
 {
     EnemyBaseState currentState;
     public EnemyPatrolState PatrolState = new EnemyPatrolState();
-    public EnemySusState SusState = new EnemySusState();
     public EnemyAlertState AlertState = new EnemyAlertState();
     public EnemyCombatState CombatState = new EnemyCombatState();
     public EnemySearchState SearchState = new EnemySearchState();
@@ -72,6 +71,10 @@ public class EnemyStateManager : MonoBehaviour
     private Color targetColor;     // 目标颜色
     public float colorLerpSpeed = 2f;  // 控制 Lerp 速度
     private ResourceManager resourceManager;
+
+    [Header("Alert System")]
+    public float alertRadius = 10f;     // 警戒范围
+    public LayerMask enemyLayer;        // 用于筛选敌人层
 
 
     void Start()
@@ -313,48 +316,59 @@ public bool DetectItem()
         return direction;
     }
 
-void UpdateAlertMeter()
-{
-    if (canSeeItem)
+    void UpdateAlertMeter()
     {
-        // 检测到玩家时，警戒值逐渐增加
-        alertMeter += Time.deltaTime * alertMeterIncreaseRate;
-    }
-    else if (canDecreaseAlertMeter)
-    {
-        // 如果允许，未检测到玩家时警戒值逐渐减少
-        alertMeter -= Time.deltaTime * alertMeterDecreaseRate;
-    }
+        if (canSeeItem)
+        {
+            // 检测到玩家时，警戒值逐渐增加
+            alertMeter += Time.deltaTime * alertMeterIncreaseRate;
+        }
+        else if (canDecreaseAlertMeter)
+        {
+            // 如果允许，未检测到玩家时警戒值逐渐减少
+            alertMeter -= Time.deltaTime * alertMeterDecreaseRate;
+        }
 
-    // 限制警戒值在 0 到最大值之间
-    alertMeter = Mathf.Clamp(alertMeter, 0, alertMeterMax);
+        // 限制警戒值在 0 到最大值之间
+        alertMeter = Mathf.Clamp(alertMeter, 0, alertMeterMax);
 
-    // 检查警戒值是否达到最大值
-    if (alertMeter >= alertMeterMax)
-    {
-        // 达到最大值后停止降低
-        alertMeter = alertMeterMax;
-        canDecreaseAlertMeter = false;
-    }
+        // 检查警戒值是否达到最大值
+        if (alertMeter >= alertMeterMax)
+        {
+            // 达到最大值后停止降低
+            alertMeter = alertMeterMax;
+            canDecreaseAlertMeter = false;
+        }
 
-    // 根据警戒值的不同阈值进行状态切换
-    if (alertMeter >= alertThresholds[0] && alertMeter < alertThresholds[1])
-    {
-        // 切换到警戒状态 SusState
-        Debug.Log("Switch to SusState");
+        // 根据警戒值的不同阈值进行状态切换
+        if (alertMeter >= alertThresholds[0] && alertMeter < alertThresholds[1])
+        {
+            // 切换到警戒状态 SusState
+            Debug.Log("Switch to SusState");
+        }
+        else if (alertMeter >= alertThresholds[1] && alertMeter < alertThresholds[2])
+        {
+            // 切换到警戒状态 AlertState
+            Debug.Log("Switch to AlertState");
+        }
+        else if (alertMeter >= alertThresholds[2])
+        {
+            // 切换到战斗状态 CombatState
+            Debug.Log("Switch to CombatState");
+            BroadcastAlert();
+            canDecreaseAlertMeter = false;  // 达到最大值后停止降低
+
+            if (item != null)
+            {
+                // 计算目标方向
+                Vector3 directionToPlayer = (item.position - transform.position).normalized;
+                Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
+                // 使用 Slerp 平滑旋转到目标方向
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation,Time.deltaTime * 3f);
+            }
+
+        }
     }
-    else if (alertMeter >= alertThresholds[1] && alertMeter < alertThresholds[2])
-    {
-        // 切换到警戒状态 AlertState
-        Debug.Log("Switch to AlertState");
-    }
-    else if (alertMeter >= alertThresholds[2])
-    {
-        // 切换到战斗状态 CombatState
-        Debug.Log("Switch to CombatState");
-        canDecreaseAlertMeter = false;  // 达到最大值后停止降低
-    }
-}
 
     void UpdateAlertLight()
     {
@@ -395,10 +409,60 @@ void UpdateAlertMeter()
         lineRenderer.endWidth = 0.2f;
     }
 
+
     void SwitchState(EnemyBaseState state)
     {
         currentState = state;
         state.EnterState(this);
+    }
+
+    void BroadcastAlert()
+    {
+        // 使用 Physics.OverlapSphere 检测范围内的敌人 Collider
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, alertRadius, enemyLayer);
+
+        // 如果没有检测到任何敌人
+        if (hitColliders.Length == 0)
+        {
+            Debug.Log("No enemies detected");
+            return;
+        }
+
+        // 遍历检测到的敌人
+        foreach (Collider collider in hitColliders)
+        {
+            // 检查 Collider 所属的物体是否有 EnemyStateManager 组件
+            EnemyStateManager enemy = collider.GetComponent<EnemyStateManager>();
+
+            if (enemy != null && enemy != this) // 确保检测到的对象是敌人且不是自己
+            {
+                // 切换敌人状态为 AlertState
+                enemy.alertMeter = alertMeter;
+
+                Debug.Log("Alert broadcasted to: " + enemy.name);
+
+                // 让敌人平滑看向玩家
+                if (enemy.item != null)
+                {
+                    Vector3 directionToPlayer = (enemy.item.position - enemy.transform.position).normalized;
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
+
+                    // 平滑旋转
+                    enemy.transform.rotation = Quaternion.Slerp(
+                        enemy.transform.rotation,
+                        targetRotation,
+                        Time.deltaTime * 3f // 调整旋转速度
+                    );
+                }
+            }
+        }
+    }
+
+// 敌人警报的传递范围
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, alertRadius);
     }
 
 }
