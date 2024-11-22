@@ -354,7 +354,7 @@ public class EnemyStateManager : MonoBehaviour
         lineRenderer.endWidth = 0.2f;
     }
 
-    void SwitchState(EnemyBaseState newState)
+    public void SwitchState(EnemyBaseState newState)
     {
         if (currentState != null)
         {
