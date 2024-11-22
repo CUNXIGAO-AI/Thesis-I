@@ -14,11 +14,18 @@ public class EnemyPatrolState : EnemyBaseState
         Debug.Log("Start from Patrol State");
         navAgent = enemy.GetComponent<NavMeshAgent>();
         navAgent.speed = enemy.patrolSpeed;
+
+        if (enemy.rotationPoints.Length > 0)
+        {
+            enemy.targetRotation = Quaternion.Euler(enemy.rotationPoints[enemy.currentRotationIndex]);
+        }
     }
 
     public override void UpdateState(EnemyStateManager enemy)
     {
         Patrol(enemy);
+        PerformRotation(enemy);
+    
     }
 
     public override void ExitState(EnemyStateManager enemy)
@@ -26,6 +33,31 @@ public class EnemyPatrolState : EnemyBaseState
         // 离开巡逻状态时执行的逻辑
     }
 
+    private static void PerformRotation(EnemyStateManager enemy) // 旋转
+    {
+        if (!enemy.shouldRotate || enemy.rotationPoints.Length == 0) return; // 如果不需要旋转或者没有旋转点，直接返回
+
+        // 平滑旋转到目标点
+        enemy.transform.rotation = Quaternion.RotateTowards(
+            enemy.transform.rotation,
+            enemy.targetRotation,
+            enemy.rotationSpeed * Time.deltaTime
+        );
+
+        // 检查是否到达目标角度
+        if (Quaternion.Angle(enemy.transform.rotation, enemy.targetRotation) < 0.1f)
+        {
+            enemy.waitTimer += Time.deltaTime;
+
+            // 如果等待时间已达到，更新到下一个点
+            if (enemy.waitTimer >= enemy.waitTimeAtPoint)
+            {
+                enemy.waitTimer = 0f;
+                enemy.currentRotationIndex = (enemy.currentRotationIndex + 1) % enemy.rotationPoints.Length;
+                enemy.targetRotation = Quaternion.Euler(enemy.rotationPoints[enemy.currentRotationIndex]);
+            }
+        }
+    }
     private void Patrol(EnemyStateManager enemy)
     {
         if (enemy.waypoints.Length == 0) return;

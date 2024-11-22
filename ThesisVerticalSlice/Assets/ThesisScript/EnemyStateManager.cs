@@ -14,8 +14,7 @@ public class EnemyStateManager : MonoBehaviour
     public EnemyCombatState CombatState = new EnemyCombatState();
     public EnemySearchState SearchState = new EnemySearchState();
 
-
-    // Detection parameters
+    [Header("Detection Parameters")] // 
     public Transform item;  // 改为检测物品
     public float viewRadius = 10f;  // 视野范围
     [Range(0, 360)] public float horizontalViewAngle = 90f;  // 水平视野角度
@@ -25,6 +24,7 @@ public class EnemyStateManager : MonoBehaviour
     public Color defaultRayColor = Color.blue;  // 默认颜色
     public Color detectedRayColor = Color.red;  // 检测到物品的颜色
 
+    [Header("Patrol System")] // 
     // Waypoints for patrolling
     public Transform[] waypoints;  // 巡逻点数组
     public float waypointReachThreshold = 0.5f;  // 到达巡逻点的距离阈值
@@ -35,29 +35,28 @@ public class EnemyStateManager : MonoBehaviour
     
     //alert system
     // 警戒参数
-    
+    [Header("Alert Bar")] // 
     public float alertMeter = 0;  // 当前警戒值
     
     public float alertMeterMax = 100;  // 警戒条最大值
     public float alertMeterIncreaseRate = 5f;  // 检测到玩家时警戒条增加速度
     public float alertMeterDecreaseRate = 3f;  // 未检测到玩家时警戒条减少速度
 
-    // 警戒条 UI
-
     // 定义多个警戒值阈值
     public float[] alertThresholds = { 25f, 50f, 100f };
 
     private bool canDecreaseAlertMeter = true;
 
+    [Header("Rotation System")] // 
     public bool shouldRotate = false; 
 
-    //CCTV Enemy
+    //CCTV Enemy 
     public Vector3[] rotationPoints;  // 定义旋转目标角度（欧拉角）
-    public float rotationSpeed = 30f;  // 旋转速度
+    public float rotationSpeed = 10f;  // 旋转速度
     public float waitTimeAtPoint = 2f;  // 每个角度停留时间
-    private int currentRotationIndex = 0;  // 当前旋转角度的索引
-    private Quaternion targetRotation;  // 当前目标旋转
-    private float waitTimer = 0f;  // 停留计时器
+    [HideInInspector] public int currentRotationIndex = 0;  // 当前旋转角度的索引
+    [HideInInspector] public Quaternion targetRotation;  // 当前目标旋转
+    [HideInInspector] public float waitTimer = 0f;  // 停留计时器
     private bool previousCanSeeItem = false; // 用于跟踪上一次的 canSeeItem 状态
 
     private Light alertSpotLight;  // 用于引用 SpotLight
@@ -72,9 +71,10 @@ public class EnemyStateManager : MonoBehaviour
     public float colorLerpSpeed = 2f;  // 控制 Lerp 速度
     private ResourceManager resourceManager;
 
-    [Header("Alert System")]
+    [Header("Share Alert Among Enemies")] // 
     public float alertRadius = 10f;     // 警戒范围
     public LayerMask enemyLayer;        // 用于筛选敌人层
+    private bool hasBroadcasted = false;
 
 
     void Start()
@@ -122,14 +122,9 @@ public class EnemyStateManager : MonoBehaviour
         }
     }
 
-     void Update()
+    void Update()
     {
         currentState.UpdateState(this);
-
-        if (shouldRotate)
-        {
-            RotateBetweenPoints();
-        }
 
         // 手动更新物体朝向
         UpdateRotation();
@@ -168,28 +163,10 @@ public class EnemyStateManager : MonoBehaviour
         // 先关掉射线
         // Vector3 endPoint = transform.position + rayDirection * viewRadius;
         // UpdateLineRenderer(transform.position, endPoint, canSeeItem ? detectedRayColor : defaultRayColor);
+
+        Debug.Log("Current State: " + currentState);
         
     }
-
-     // CCTV旋转到多个目标角度
-void RotateBetweenPoints()
-{
-    // 平滑旋转，确保考虑X、Y、Z轴的旋转
-    transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-
-    if (Quaternion.Angle(transform.rotation, targetRotation) < 0.1f)
-    {
-        waitTimer += Time.deltaTime;
-        if (waitTimer >= waitTimeAtPoint)
-        {
-            waitTimer = 0f;
-            currentRotationIndex = (currentRotationIndex + 1) % rotationPoints.Length;
-
-            // 更新目标旋转角度，使用X、Y、Z的欧拉角
-            targetRotation = Quaternion.Euler(rotationPoints[currentRotationIndex]);
-        }
-    }
-}
 
     // 手动旋转物体朝向 NavMeshAgent 的前进方向
     void UpdateRotation()
@@ -204,57 +181,51 @@ void RotateBetweenPoints()
         }
     }
 
-    public void Rotate()
+
+    // 基于物体当前朝向检测物品
+    public bool DetectItem()
     {
-        // 在这里实现旋转逻辑
-        transform.Rotate(Vector3.up * 30f * Time.deltaTime);  // Y 轴旋转
-    }
+        Vector3 dirToItem = item.position - transform.position;
+        float distanceToItem = dirToItem.magnitude;
+        dirToItem.Normalize();
 
+        float edgeBuffer = 2.5f;  // 视野边缘缓冲区
 
-        // 基于物体当前朝向检测玩家
-public bool DetectItem()
-{
-    Vector3 dirToItem = item.position - transform.position;
-    float distanceToItem = dirToItem.magnitude;
-    dirToItem.Normalize();
-
-    float edgeBuffer = 2.5f;  // 视野边缘缓冲区
-
-    if (distanceToItem <= viewRadius)
-    {
-        Vector3 horizontalDir = Vector3.ProjectOnPlane(dirToItem, transform.up).normalized;
-        float dotHorizontal = Vector3.Dot(transform.forward, horizontalDir);
-        float horizontalAngle = Mathf.Acos(dotHorizontal) * Mathf.Rad2Deg;
-
-        float dotVertical = Vector3.Dot(transform.forward, dirToItem);
-        float totalAngle = Mathf.Acos(dotVertical) * Mathf.Rad2Deg;
-        float verticalAngle = totalAngle - horizontalAngle;
-
-        if (Vector3.Dot(transform.up, dirToItem) < 0)
+        if (distanceToItem <= viewRadius)
         {
-            verticalAngle = -verticalAngle;
-        }
+            Vector3 horizontalDir = Vector3.ProjectOnPlane(dirToItem, transform.up).normalized;
+            float dotHorizontal = Vector3.Dot(transform.forward, horizontalDir);
+            float horizontalAngle = Mathf.Acos(dotHorizontal) * Mathf.Rad2Deg;
 
-        if (horizontalAngle <= (horizontalViewAngle / 2) - edgeBuffer && 
-            Mathf.Abs(verticalAngle) <= (verticalViewAngle / 2) - edgeBuffer)
-        {
-            RaycastHit[] hits = Physics.RaycastAll(transform.position, dirToItem, distanceToItem);
-            foreach (RaycastHit hit in hits)
+            float dotVertical = Vector3.Dot(transform.forward, dirToItem);
+            float totalAngle = Mathf.Acos(dotVertical) * Mathf.Rad2Deg;
+            float verticalAngle = totalAngle - horizontalAngle;
+
+            if (Vector3.Dot(transform.up, dirToItem) < 0)
             {
-                // 检查碰撞物体是否具有 "Cover" 标签
-                if (hit.collider.CompareTag("Cover"))
-                {
-                    return false;  // 被标记为“Cover”的物体阻挡了视线
-                }
+                verticalAngle = -verticalAngle;
             }
-            return true; // 未被阻挡，检测到物品
+
+            if (horizontalAngle <= (horizontalViewAngle / 2) - edgeBuffer && 
+                Mathf.Abs(verticalAngle) <= (verticalViewAngle / 2) - edgeBuffer)
+            {
+                RaycastHit[] hits = Physics.RaycastAll(transform.position, dirToItem, distanceToItem);
+                foreach (RaycastHit hit in hits)
+                {
+                    // 检查碰撞物体是否具有 "Cover" 标签
+                    if (hit.collider.CompareTag("Cover"))
+                    {
+                        return false;  // 被标记为“Cover”的物体阻挡了视线
+                    }
+                }
+                return true; // 未被阻挡，检测到物品
+            }
         }
+        return false; // 未检测到物品
     }
-    return false; // 未检测到物品
-}
+
     void OnDrawGizmos()
     {
-
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, viewRadius);
 
@@ -302,20 +273,6 @@ public bool DetectItem()
         Gizmos.DrawLine(vertices[1], vertices[3]);
     }
 
-    // use this method to get the direction vector from an angle in degrees
-    public Vector3 DirFromAngle(float horizontalAngleInDegrees, float verticalAngleInDegrees)
-    {
-        // transform the angle from degrees to radians
-        float horizontalRadians = horizontalAngleInDegrees * Mathf.Deg2Rad;
-        float verticalRadians = verticalAngleInDegrees * Mathf.Deg2Rad;
-
-        // calculate the horizontal direction
-        Vector3 direction = transform.forward * Mathf.Cos(horizontalRadians) + transform.right * Mathf.Sin(horizontalRadians);
-        direction = direction * Mathf.Cos(verticalRadians) + transform.up * Mathf.Sin(verticalRadians);
-
-        return direction;
-    }
-
     void UpdateAlertMeter()
     {
         if (canSeeItem)
@@ -344,29 +301,17 @@ public bool DetectItem()
         if (alertMeter >= alertThresholds[0] && alertMeter < alertThresholds[1])
         {
             // 切换到警戒状态 SusState
-            Debug.Log("Switch to SusState");
+            //Debug.Log("Switch to SusState");
         }
         else if (alertMeter >= alertThresholds[1] && alertMeter < alertThresholds[2])
         {
             // 切换到警戒状态 AlertState
-            Debug.Log("Switch to AlertState");
+            //Debug.Log("Switch to AlertState");
         }
         else if (alertMeter >= alertThresholds[2])
         {
-            // 切换到战斗状态 CombatState
-            Debug.Log("Switch to CombatState");
-            BroadcastAlert();
-            canDecreaseAlertMeter = false;  // 达到最大值后停止降低
-
-            if (item != null)
-            {
-                // 计算目标方向
-                Vector3 directionToPlayer = (item.position - transform.position).normalized;
-                Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
-                // 使用 Slerp 平滑旋转到目标方向
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation,Time.deltaTime * 3f);
-            }
-
+            // 切换到警戒状态 CombatState
+            SwitchState(CombatState);
         }
     }
 
@@ -409,60 +354,53 @@ public bool DetectItem()
         lineRenderer.endWidth = 0.2f;
     }
 
-
-    void SwitchState(EnemyBaseState state)
+    void SwitchState(EnemyBaseState newState)
     {
-        currentState = state;
-        state.EnterState(this);
+        if (currentState != null)
+        {
+            currentState.ExitState(this); // 退出当前状态
+        }
+
+        currentState = newState;
+        currentState.EnterState(this); // 进入新状态
     }
 
-    void BroadcastAlert()
+    public void BroadcastAlert()
     {
-        // 使用 Physics.OverlapSphere 检测范围内的敌人 Collider
+        if (hasBroadcasted) return;
+        hasBroadcasted = true; // 防止重复调用
+
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, alertRadius, enemyLayer);
 
-        // 如果没有检测到任何敌人
         if (hitColliders.Length == 0)
         {
-            Debug.Log("No enemies detected");
+            Debug.Log("No enemies detected in alert radius.");
             return;
         }
 
-        // 遍历检测到的敌人
         foreach (Collider collider in hitColliders)
         {
-            // 检查 Collider 所属的物体是否有 EnemyStateManager 组件
             EnemyStateManager enemy = collider.GetComponent<EnemyStateManager>();
+            enemy.alertMeter = alertMeter; // 传递警戒值
 
-            if (enemy != null && enemy != this) // 确保检测到的对象是敌人且不是自己
+            if (enemy != null && enemy != this) // 确保不是自己
             {
-                // 切换敌人状态为 AlertState
-                enemy.alertMeter = alertMeter;
-
-                Debug.Log("Alert broadcasted to: " + enemy.name);
-
-                // 让敌人平滑看向玩家
-                if (enemy.item != null)
-                {
-                    Vector3 directionToPlayer = (enemy.item.position - enemy.transform.position).normalized;
-                    Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
-
-                    // 平滑旋转
-                    enemy.transform.rotation = Quaternion.Slerp(
-                        enemy.transform.rotation,
-                        targetRotation,
-                        Time.deltaTime * 3f // 调整旋转速度
-                    );
-                }
+                Debug.Log($"Broadcasting alert to: {enemy.name}");
+                enemy.SwitchState(enemy.CombatState); // 切换到 CombatState
             }
         }
     }
-
+    
 // 敌人警报的传递范围
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, alertRadius);
+    }
+
+    void OnDestroy()
+    {
+        currentState = null; // 释放状态引用
     }
 
 }
