@@ -1142,8 +1142,8 @@ namespace MalbersAnimations.Controller
         public void Debugging(string value)
         {
 #if UNITY_EDITOR
-            if (m_debug && animal.debugStates)
-                Debug.Log($"<B>[{animal.name}]</B> → <B>[{this.GetType().Name}]</B> → <color=white>{value}</color>", this);
+            //if (m_debug && animal.debugStates)
+                //Debug.Log($"<B>[{animal.name}]</B> → <B>[{this.GetType().Name}]</B> → <color=white>{value}</color>", this);
 #endif
         }
         #endregion 

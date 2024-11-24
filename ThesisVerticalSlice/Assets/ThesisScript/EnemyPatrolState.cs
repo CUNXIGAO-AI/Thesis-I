@@ -11,7 +11,7 @@ public class EnemyPatrolState : EnemyBaseState
 
     public override void EnterState(EnemyStateManager enemy)
     {
-        Debug.Log("Start from Patrol State");
+        Debug.Log("Entered Patrol State");
         navAgent = enemy.GetComponent<NavMeshAgent>();
         navAgent.speed = enemy.patrolSpeed;
 

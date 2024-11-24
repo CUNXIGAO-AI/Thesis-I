@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using MalbersAnimations;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
@@ -8,6 +9,9 @@ using UnityEngine.UI;
 [RequireComponent(typeof(LineRenderer))]
 public class EnemyStateManager : MonoBehaviour
 {
+    [Header("Debug")]
+    [SerializeField, Tooltip("当前敌人的状态，仅用于调试")]
+    private string currentStateName;
     EnemyBaseState currentState;
     public EnemyPatrolState PatrolState = new EnemyPatrolState();
     public EnemyAlertState AlertState = new EnemyAlertState();
@@ -20,7 +24,7 @@ public class EnemyStateManager : MonoBehaviour
     [Range(0, 360)] public float horizontalViewAngle = 90f;  // 水平视野角度
     [Range(0, 180)] public float verticalViewAngle = 60f;  // 垂直视野角度    
     private LineRenderer lineRenderer;  // 显示射线
-    private bool canSeeItem = false;  // 现在检测物品
+    [HideInInspector] public bool canSeeItem = false;  // 现在检测物品
     public Color defaultRayColor = Color.blue;  // 默认颜色
     public Color detectedRayColor = Color.red;  // 检测到物品的颜色
 
@@ -45,7 +49,7 @@ public class EnemyStateManager : MonoBehaviour
     // 定义多个警戒值阈值
     public float[] alertThresholds = { 25f, 50f, 100f };
 
-    private bool canDecreaseAlertMeter = true;
+    [HideInInspector] public bool canDecreaseAlertMeter = true;
 
     [Header("Rotation System")] // 
     public bool shouldRotate = false; 
@@ -75,6 +79,11 @@ public class EnemyStateManager : MonoBehaviour
     public float alertRadius = 10f;     // 警戒范围
     public LayerMask enemyLayer;        // 用于筛选敌人层
     private bool hasBroadcasted = false;
+    public bool playerLost = false; // 用于标记 CombatState 是否丢失玩家
+    [HideInInspector] public bool hasSwitchedToCombatState = false; // 防止重复切换到 CombatState
+    private bool hasSwitchedToSearchState = false; // 确保切换只执行一次
+    private bool hasSwitchedToPatrolState = false; // 确保切换只执行一次
+    private bool hasSwitchedToAlertState = false;
 
 
     void Start()
@@ -84,7 +93,7 @@ public class EnemyStateManager : MonoBehaviour
         
         // 禁用 NavMeshAgent 的自动旋转，我们手动管理
         navAgent.updateRotation = false;
-
+        Debug.Log("Start From Patrol State");
         currentState = PatrolState;
         currentState.EnterState(this);
 
@@ -124,6 +133,10 @@ public class EnemyStateManager : MonoBehaviour
 
     void Update()
     {
+        if (currentState != null)
+        {
+            currentStateName = currentState.GetType().Name; // 更新当前状态名称
+        }
         currentState.UpdateState(this);
 
         // 手动更新物体朝向
@@ -159,13 +172,11 @@ public class EnemyStateManager : MonoBehaviour
         UpdateAlertMeter();
         UpdateAlertLight();
 
-        // 更新 LineRenderer 的位置和颜色
-        // 先关掉射线
+        // 更新 LineRenderer 的位置和颜色 先关掉射线
         // Vector3 endPoint = transform.position + rayDirection * viewRadius;
         // UpdateLineRenderer(transform.position, endPoint, canSeeItem ? detectedRayColor : defaultRayColor);
 
-        Debug.Log("Current State: " + currentState);
-        
+        //Debug.Log("Current State: " + currentState);        
     }
 
     // 手动旋转物体朝向 NavMeshAgent 的前进方向
@@ -289,29 +300,26 @@ public class EnemyStateManager : MonoBehaviour
         // 限制警戒值在 0 到最大值之间
         alertMeter = Mathf.Clamp(alertMeter, 0, alertMeterMax);
 
-        // 检查警戒值是否达到最大值
-        if (alertMeter >= alertMeterMax)
+        // 状态切换逻辑
+        if (alertMeter >= alertThresholds[2] && !hasSwitchedToCombatState && currentState != CombatState)
         {
-            // 达到最大值后停止降低
-            alertMeter = alertMeterMax;
-            canDecreaseAlertMeter = false;
-        }
-
-        // 根据警戒值的不同阈值进行状态切换
-        if (alertMeter >= alertThresholds[0] && alertMeter < alertThresholds[1])
-        {
-            // 切换到警戒状态 SusState
-            //Debug.Log("Switch to SusState");
-        }
-        else if (alertMeter >= alertThresholds[1] && alertMeter < alertThresholds[2])
-        {
-            // 切换到警戒状态 AlertState
-            //Debug.Log("Switch to AlertState");
-        }
-        else if (alertMeter >= alertThresholds[2])
-        {
-            // 切换到警戒状态 CombatState
             SwitchState(CombatState);
+            hasSwitchedToCombatState = true;
+        }
+        else if (alertMeter >= alertThresholds[1] && alertMeter < alertThresholds[2] && currentState == PatrolState && !hasSwitchedToAlertState)
+        {
+            SwitchState(AlertState);
+            hasSwitchedToAlertState = true;
+        }
+        else if(playerLost == true && currentState == CombatState && !hasSwitchedToSearchState)
+        {
+            SwitchState(SearchState);
+            hasSwitchedToSearchState = true;
+        }
+        else if (alertMeter < alertThresholds[0] && currentState == SearchState && !hasSwitchedToPatrolState)
+        {
+            SwitchState(PatrolState);
+            hasSwitchedToPatrolState = true;
         }
     }
 
@@ -363,9 +371,18 @@ public class EnemyStateManager : MonoBehaviour
 
         currentState = newState;
         currentState.EnterState(this); // 进入新状态
+
+        currentStateName = currentState.GetType().Name; // 更新状态名称 在Inspector中
+
+        hasSwitchedToCombatState = false; // 重置状态切换标志
+        hasSwitchedToAlertState = false; // 重置状态切换标志
+        hasSwitchedToSearchState = false; // 重置状态切换标志
+        hasSwitchedToPatrolState = false; // 重置状态切换标志
+
+        hasBroadcasted = false; // 重置广播标志
     }
 
-    public void BroadcastAlert()
+    public void BroadcastCombat() // 在一定范围内和其他敌人共享战斗警报
     {
         if (hasBroadcasted) return;
         hasBroadcasted = true; // 防止重复调用
@@ -379,7 +396,7 @@ public class EnemyStateManager : MonoBehaviour
         }
 
         foreach (Collider collider in hitColliders)
-        {
+        {   
             EnemyStateManager enemy = collider.GetComponent<EnemyStateManager>();
             enemy.alertMeter = alertMeter; // 传递警戒值
 

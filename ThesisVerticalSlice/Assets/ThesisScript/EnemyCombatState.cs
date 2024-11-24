@@ -4,32 +4,47 @@ using UnityEngine;
 
 public class EnemyCombatState : EnemyBaseState
 {
-    // Start is called before the first frame update
- public override void EnterState(EnemyStateManager enemy)
+    private float timeWithoutDetection = 0f; // 用于计时未检测到物品的时间
+    private const float detectionTimeout = 5f; // 超时阈值（秒）
+
+    public override void EnterState(EnemyStateManager enemy)
     {
-        // 在进入战斗状态时广播警报
-        Debug.Log("Entereds Combat State");
-        enemy.BroadcastAlert();
+        Debug.Log("Entered Combat State");
+        enemy.BroadcastCombat();
+        timeWithoutDetection = 0f; // 重置计时器
+        enemy.playerLost = false;
     }
 
     public override void UpdateState(EnemyStateManager enemy)
     {
-        // 敌人看向玩家
         if (enemy.item != null)
         {
-            Vector3 directionToPlayer = (enemy.item.position - enemy.transform.position).normalized;
-            Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
-
-            // 平滑旋转
-            float rotationSpeed = 5f; // 增加旋转速度
-            enemy.transform.rotation = Quaternion.Slerp(
-                enemy.transform.rotation,
-                targetRotation,
-                Time.deltaTime * rotationSpeed
-            );
+            Vector3 directionToItem = (enemy.item.position - enemy.transform.position).normalized;
+            Quaternion targetRotation = Quaternion.LookRotation(directionToItem);
+            float rotationSpeed = 5f;
+            enemy.transform.rotation = Quaternion.Slerp(enemy.transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
-    }
 
+        // 检测物品状态
+        if (!enemy.DetectItem())
+        {
+            timeWithoutDetection += Time.deltaTime;
+
+            if (timeWithoutDetection >= detectionTimeout)
+            {
+                Debug.Log("Player Lost");
+                enemy.playerLost = true;
+                timeWithoutDetection = 0f; // 重置计时器
+            }
+        }
+        else
+        {
+            timeWithoutDetection = 0f; // 重置计时器
+            enemy.playerLost = false;
+        }
+        
+    }
+    
     public override void ExitState(EnemyStateManager enemy)
     {
         // 离开 CombatState 时的清理逻辑（如果需要）

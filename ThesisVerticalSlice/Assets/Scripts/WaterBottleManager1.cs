@@ -38,7 +38,7 @@ public class WaterbottleManager : MonoBehaviour
     
     public void OnPickedUpMusic()
     {
-        Debug.Log("音频渐入");
+       // Debug.Log("音频渐入");
         // 如果音频尚未播放，则开始播放
         if (!audioSource.isPlaying)
         {
