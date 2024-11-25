@@ -17,8 +17,9 @@ public class ResourceManager : MonoBehaviour
     public Image resourceImage;           
 
     private bool isDepleting = false;     // flag to check if the resource is depleting
-     private bool isInitialized = false;   // flag to check if the resource is initialized
+    private bool isInitialized = false;   // flag to check if the resource is initialized
 
+    public event System.Action OnResourceDepleted;
 
     private void Awake()
     {
@@ -52,6 +53,7 @@ public class ResourceManager : MonoBehaviour
                 SoundManager.Instance.PlayGlassBrokenSound();
                 currentResource = 0;
                 isDepleting = false;
+                OnResourceDepleted?.Invoke();
             }
         }
         else if (!isDepleting)

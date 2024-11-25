@@ -17,6 +17,7 @@ public class EnemyStateManager : MonoBehaviour
     public EnemyAlertState AlertState = new EnemyAlertState();
     public EnemyCombatState CombatState = new EnemyCombatState();
     public EnemySearchState SearchState = new EnemySearchState();
+    public EnemyOffState OffState = new EnemyOffState();
 
     [Header("Detection Parameters")] // 
     public Transform item;  // 改为检测物品
@@ -25,8 +26,8 @@ public class EnemyStateManager : MonoBehaviour
     [Range(0, 180)] public float verticalViewAngle = 60f;  // 垂直视野角度    
     private LineRenderer lineRenderer;  // 显示射线
     [HideInInspector] public bool canSeeItem = false;  // 现在检测物品
-    public Color defaultRayColor = Color.blue;  // 默认颜色
-    public Color detectedRayColor = Color.red;  // 检测到物品的颜色
+    [HideInInspector] public Color defaultRayColor = Color.blue;  // 默认射线颜色
+    [HideInInspector] public Color detectedRayColor = Color.red;  // 检测到物品的颜色
 
     [Header("Patrol System")] // 
     // Waypoints for patrolling
@@ -63,7 +64,16 @@ public class EnemyStateManager : MonoBehaviour
     [HideInInspector] public float waitTimer = 0f;  // 停留计时器
     private bool previousCanSeeItem = false; // 用于跟踪上一次的 canSeeItem 状态
 
-    private Light alertSpotLight;  // 用于引用 SpotLight
+    [HideInInspector] public Light alertSpotLight;  // 用于引用 SpotLight
+
+    
+    [Header("Search State Rotation System")]
+    public Vector3[] searchRotationPoints;  // 自定义的搜索旋转路径
+    public float searchRotationSpeed = 5f;  // 搜索时的旋转速度
+    public float searchWaitTimeAtPoint = 1.5f;  // 搜索状态中每个点的停留时间
+    [HideInInspector] public int searchRotationIndex = 0;  // 搜索旋转的当前索引
+    [HideInInspector] public Quaternion searchTargetRotation;  // 搜索状态中的目标旋转
+    [HideInInspector] public float searchWaitTimer = 0f;  // 搜索状态中的等待计时器
 
     [Header("Light Colors")] // 在 Inspector 窗口中自定义颜色
     public Color lowAlertColor = Color.white;
@@ -83,7 +93,7 @@ public class EnemyStateManager : MonoBehaviour
     [HideInInspector] public bool hasSwitchedToCombatState = false; // 防止重复切换到 CombatState
     private bool hasSwitchedToSearchState = false; // 确保切换只执行一次
     private bool hasSwitchedToPatrolState = false; // 确保切换只执行一次
-    private bool hasSwitchedToAlertState = false;
+    private bool hasSwitchedToAlertState = false; // 确保切换只执行一次
 
 
     void Start()
@@ -129,6 +139,10 @@ public class EnemyStateManager : MonoBehaviour
         {
             Debug.LogError("ResourceManager not found in the scene!");
         }
+        else
+        {
+            resourceManager.OnResourceDepleted += HandleResourceDepleted; // 订阅资源耗尽事件
+        }
     }
 
     void Update()
@@ -140,7 +154,7 @@ public class EnemyStateManager : MonoBehaviour
         currentState.UpdateState(this);
 
         // 手动更新物体朝向
-        UpdateRotation();
+        //UpdateRotation();
 
         // 更新 Raycast 方向和距离，改为检测物品
         Vector3 rayDirection = (item.position - transform.position).normalized;
@@ -158,7 +172,7 @@ public class EnemyStateManager : MonoBehaviour
             if (canSeeItem) // 检测到物品
             {
                 resourceManager.ChangeUIColor(new Color(1f, 0f, 0f, 1f));
-                resourceManager.SetDepletionMultiplier(15f);
+                resourceManager.SetDepletionMultiplier(50f);
             }
             else
             {
@@ -172,6 +186,7 @@ public class EnemyStateManager : MonoBehaviour
         UpdateAlertMeter();
         UpdateAlertLight();
 
+
         // 更新 LineRenderer 的位置和颜色 先关掉射线
         // Vector3 endPoint = transform.position + rayDirection * viewRadius;
         // UpdateLineRenderer(transform.position, endPoint, canSeeItem ? detectedRayColor : defaultRayColor);
@@ -180,7 +195,7 @@ public class EnemyStateManager : MonoBehaviour
     }
 
     // 手动旋转物体朝向 NavMeshAgent 的前进方向
-    void UpdateRotation()
+    /*void UpdateRotation()
     {
         if (navAgent.velocity.sqrMagnitude > 0.1f)  // 当有移动时
         {
@@ -190,7 +205,7 @@ public class EnemyStateManager : MonoBehaviour
             // 使用 RotateTowards 使物体平滑地旋转到前进方向
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, navAgent.angularSpeed * Time.deltaTime);
         }
-    }
+    }*/
 
 
     // 基于物体当前朝向检测物品
@@ -286,6 +301,9 @@ public class EnemyStateManager : MonoBehaviour
 
     void UpdateAlertMeter()
     {
+
+        if (resourceManager.currentResource <= 0) return;
+
         if (canSeeItem)
         {
             // 检测到玩家时，警戒值逐渐增加
@@ -418,6 +436,14 @@ public class EnemyStateManager : MonoBehaviour
     void OnDestroy()
     {
         currentState = null; // 释放状态引用
+    }
+
+    private void HandleResourceDepleted() // 当资源耗尽时调用
+    {
+        if (currentState != OffState)
+        {
+            SwitchState(OffState);
+        }
     }
 
 }
